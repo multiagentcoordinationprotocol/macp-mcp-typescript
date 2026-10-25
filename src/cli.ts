@@ -1,9 +1,14 @@
 #!/usr/bin/env node
-/** Entry point: `macp-mcp` (stdio transport). stdout carries only the MCP protocol; everything else goes to stderr. */
+/**
+ * Entry point (stdio transport): `macp-mcp` serves the Decision tools;
+ * `macp-mcp gate ...` proxies an upstream MCP server behind gate rules.
+ * stdout carries only the MCP protocol; everything else goes to stderr.
+ */
 
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { configureLogging } from 'macp-sdk-typescript';
 import { ConfigError, authMode, loadSettings, type Settings } from './config';
+import { runGate } from './gate/cli';
 import { buildServer } from './server';
 
 async function main(): Promise<void> {
@@ -15,8 +20,17 @@ async function main(): Promise<void> {
       ),
   });
   let settings: Settings;
+  const [command, ...rest] = process.argv.slice(2);
   try {
     settings = loadSettings();
+    if (command === 'gate') {
+      process.stderr.write(
+        `macp-mcp gate: agent=${settings.agentId} runtime=${settings.target} ` +
+          `auth=${authMode(settings)} tls=${settings.allowInsecure ? 'off' : 'on'}\n`,
+      );
+      await runGate(rest, settings);
+      return;
+    }
   } catch (err) {
     if (err instanceof ConfigError) {
       process.stderr.write(`macp-mcp: ${err.message}\n`);
