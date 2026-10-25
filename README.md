@@ -126,6 +126,84 @@ the gRPC status name.
 The server is stateless. Every read replays the session from the runtime, so a
 restart loses nothing, and several servers (agents) can share one session.
 
+## Gate upstream tool calls (`macp-mcp gate`)
+
+`macp-mcp gate` is a second mode of the same binary. It runs as an MCP server
+in front of another (upstream) MCP server, and puts the tool calls you name
+behind a MACP session: a matching call reaches the upstream only after a
+Quorum or Decision session commits `approve`. Every other call passes straight
+through.
+
+```bash
+macp-mcp gate --policy gate.json --upstream npx -y @modelcontextprotocol/server-filesystem /srv/data
+```
+
+`--upstream` takes the rest of the command line as the upstream's stdio
+command. The gate uses the same environment variables as the base server
+(`MACP_AGENT_ID` is the gate's identity: it initiates and commits every
+session). The upstream inherits the gate's environment minus
+`MACP_AUTH_TOKEN`, so the gate's credential never reaches it.
+
+`gate.json` names the rules; the first rule whose `tool` matches wins (exact
+name, or a glob with `*` and `?`):
+
+```json
+{
+  "version": 1,
+  "server": "filesystem",
+  "rules": [
+    { "tool": "write_*", "mode": "macp.mode.quorum.v1", "participants": ["alice", "bob", "carol"], "threshold": 2 },
+    { "tool": "move_file", "mode": "macp.mode.decision.v1", "participants": ["alice", "bob"], "ttl_ms": 60000 }
+  ]
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `server` | The upstream's name, bound into every gated call's `context_id`. |
+| `tool` | Exact tool name or glob. |
+| `mode` | `macp.mode.quorum.v1` (ApprovalRequest + ballots) or `macp.mode.decision.v1` (Proposal + votes). |
+| `participants` | The approvers. Must not include the gate's own agent id. |
+| `threshold` | APPROVE ballots needed, in either mode. Default: a strict majority of `participants`. |
+| `ttl_ms` | Session TTL. Default `300000`. |
+| `policy_version` | Optional RFC-MACP-0012 policy to bind the session to, for example one of the spec's policy packs. |
+
+For a gated call the gate:
+
+1. Starts a session whose `context_id` is `sha256:` + the hex SHA-256 of the
+   RFC 8785 (JCS) form of `{"arguments", "server", "tool"}`. The same canonical
+   JSON travels in the ApprovalRequest `details` (Quorum) or the Proposal
+   `rationale` (Decision), so an approver can recompute the binding.
+2. Commits `approve` as soon as the approvers' latest ballots reach the
+   threshold, or `deny` as soon as they no longer can (REJECT and ABSTAIN both
+   count as not-approve).
+3. On `approve`, forwards the call and adds the commitment to the result,
+   beside any `_meta` the upstream set:
+
+   ```json
+   "_meta": {
+     "io.multiagentcoordinationprotocol/commitment": {
+       "session_id": "…", "mode": "macp.mode.quorum.v1", "outcome": "approve",
+       "commitment_hash": "sha256:…"
+     }
+   }
+   ```
+
+   `commitment_hash` is the RFC-MACP-0013 hash; the base server's `verify`
+   tool recomputes it from the runtime's history.
+4. Otherwise refuses with a tool error, and never calls the upstream:
+   `POLICY_DENIED: …` when the session commits `deny` (or a bound policy
+   refuses the commitment), `SESSION_NOT_OPEN: …` when the session expires or
+   is cancelled without a commitment. If the session is still open 5 s after
+   its TTL, the gate cancels it.
+
+Approvers are ordinary MACP agents, for example a base `macp-mcp` server
+driven by a person or another model, voting through the runtime. See
+[examples/gated-tool-call.md](examples/gated-tool-call.md) for a full
+transcript. The policy schema, CLI flags, wire values and `context_id` test
+vectors live in [`contract/gate/`](contract/gate), byte-identical to the
+Python macp-mcp's.
+
 ## Tool contract
 
 [`contract/tools.json`](contract/tools.json) pins the tool names,
@@ -137,7 +215,8 @@ arguments against it with Ajv, so the advertised surface cannot drift from
 the file. The file also ships in the npm package as
 `@multiagentcoordinationprotocol/mcp/contract/tools.json`.
 
-CI fails if the copy drifts from the Python repo's (`make verify-contract`).
+The gate's contract (`contract/gate/`) is vendored the same way. CI fails if
+any of these files drifts from the Python repo's (`make verify-contract`).
 After a deliberate surface change lands in macp-mcp, run `make sync-contract`
 and implement the change here.
 
