@@ -1,0 +1,67 @@
+{
+  "name": "@multiagentcoordinationprotocol/mcp",
+  "version": "0.1.0",
+  "description": "MCP server that exposes MACP Decision sessions as tools (TypeScript twin of macp-mcp)",
+  "license": "Apache-2.0",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "macp-mcp": "dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./contract/tools.json": "./contract/tools.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "contract/tools.json",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src/ tests/",
+    "format": "prettier --write 'src/**/*.ts' 'tests/**/*.ts' 'scripts/**/*.ts'",
+    "format:check": "prettier --check 'src/**/*.ts' 'tests/**/*.ts' 'scripts/**/*.ts'",
+    "test": "vitest run --config vitest.config.mts",
+    "test:integration": "npm run build && vitest run --config vitest.integration.config.mts",
+    "prepublishOnly": "npm run check && npm run lint && npm run format:check && npm test && npm run build"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "macp",
+    "mcp",
+    "model-context-protocol",
+    "multi-agent",
+    "coordination"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/multiagentcoordinationprotocol/macp-mcp-typescript.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "ajv": "^8.20.0",
+    "macp-sdk-typescript": "^0.17.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@typescript-eslint/eslint-plugin": "^8.72.0",
+    "@typescript-eslint/parser": "^8.72.0",
+    "eslint": "^10.13.0",
+    "prettier": "^3.9.10",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.5"
+  }
+}

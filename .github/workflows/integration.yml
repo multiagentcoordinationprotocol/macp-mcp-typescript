@@ -1,0 +1,43 @@
+name: Integration
+
+# Acceptance: two macp-mcp processes, each driven by a real MCP client over
+# stdio, run a Decision session to RESOLVED against the published runtime
+# image and verify the commitment hash.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      runtime:
+        image: ghcr.io/multiagentcoordinationprotocol/macp-runtime:0.9.0
+        ports:
+          - 50123:50123
+        env:
+          MACP_BIND_ADDR: 0.0.0.0:50123
+          MACP_ALLOW_INSECURE: '1'
+          MACP_MEMORY_ONLY: '1'
+    env:
+      MACP_RUNTIME_ADDRESS: localhost:50123
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Wait for runtime
+        run: npx tsx scripts/wait-for-runtime.ts
+      - run: npm run test:integration
