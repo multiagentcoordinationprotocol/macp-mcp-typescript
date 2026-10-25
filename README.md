@@ -6,6 +6,8 @@ session. It is the TypeScript twin of the Python
 [macp-mcp](https://github.com/multiagentcoordinationprotocol/macp-mcp). Both
 expose the same tool surface: the same names, input schemas and outputs,
 pinned by one shared manifest ([Tool contract](#tool-contract)).
+Package versions are independent of the Python macp-mcp; tool parity is
+enforced by `make verify-contract`, not by matching version numbers.
 
 MCP decides which tools a model can call. MACP decides who may use them and
 when, and records what was decided. The model drives every step through
