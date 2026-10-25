@@ -90,8 +90,8 @@ function int64(value: string | number | undefined): number {
   return value === undefined || value === '' ? 0 : Number(value);
 }
 
-/** A decoded CommitmentPayload with proto3 defaults filled in (protobufjs omits them). */
-function decodeCommitment(client: BridgeClient, wire: Buffer): CommitmentPayload {
+/** A decoded CommitmentPayload with proto3 defaults filled in (protobufjs omits them). Commitment is a core message, so any mode decodes it. */
+export function decodeCommitment(client: BridgeClient, wire: Buffer): CommitmentPayload {
   const raw = client.protoRegistry.decodeKnownPayload(MODE_DECISION, 'Commitment', wire) ?? {};
   const str = (key: string): string => (typeof raw[key] === 'string' ? (raw[key] as string) : '');
   const payload: CommitmentPayload = {

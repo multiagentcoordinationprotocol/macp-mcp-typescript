@@ -2,7 +2,9 @@ name: Integration
 
 # Acceptance: two macp-mcp processes, each driven by a real MCP client over
 # stdio, run a Decision session to RESOLVED against the published runtime
-# image and verify the commitment hash.
+# image and verify the commitment hash; and `macp-mcp gate` in front of a stub
+# upstream forwards, denies (POLICY_DENIED) and expires (SESSION_NOT_OPEN)
+# gated tool calls.
 on:
   push:
     branches: [main]

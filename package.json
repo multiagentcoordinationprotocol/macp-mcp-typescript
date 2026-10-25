@@ -1,7 +1,7 @@
 {
   "name": "@multiagentcoordinationprotocol/mcp",
   "version": "0.2.0",
-  "description": "MCP server that exposes MACP Decision sessions as tools (TypeScript twin of macp-mcp)",
+  "description": "MCP server that exposes MACP Decision sessions as tools and gates upstream MCP tool calls behind MACP sessions (TypeScript twin of macp-mcp)",
   "license": "Apache-2.0",
   "type": "commonjs",
   "main": "dist/index.js",
@@ -15,11 +15,13 @@
       "default": "./dist/index.js"
     },
     "./contract/tools.json": "./contract/tools.json",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./contract/gate/*": "./contract/gate/*"
   },
   "files": [
     "dist",
     "contract/tools.json",
+    "contract/gate",
     "CHANGELOG.md"
   ],
   "scripts": {
