@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/multiagentcoordinationprotocol/macp-mcp-typescript/compare/v0.2.0...v0.3.0) (2026-10-25)
+
+
+### Features
+
+* **gate:** macp-mcp gate — quorum-gated upstream tool calls (W3.8) ([#5](https://github.com/multiagentcoordinationprotocol/macp-mcp-typescript/issues/5)) ([503f5f4](https://github.com/multiagentcoordinationprotocol/macp-mcp-typescript/commit/503f5f413ee77de1d95d9e7802f647313d6e1df7))
+
 ## [0.2.0](https://github.com/multiagentcoordinationprotocol/macp-mcp-typescript/compare/v0.1.0...v0.2.0) (2026-10-25)
 
 
