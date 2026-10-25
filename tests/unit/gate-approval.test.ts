@@ -175,7 +175,7 @@ describe('GateApprover, Quorum', () => {
       .catch((e: unknown) => e);
     expect(err).toBeInstanceOf(GateRefusal);
     expect((err as GateRefusal).code).toBe('SESSION_NOT_OPEN');
-    expect((err as GateRefusal).message).toMatch(/^session \S+ ended EXPIRED without a commitment; tool call write/);
+    expect((err as GateRefusal).message).toMatch(/^session \S+ ended EXPIRED without a commitment$/);
     expect(rt.cancel).not.toHaveBeenCalled();
   });
 

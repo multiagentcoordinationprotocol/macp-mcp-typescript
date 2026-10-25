@@ -38,7 +38,7 @@ describe('parseGateConfig', () => {
   });
 
   it('rejects a repeated participant, the gate itself, and a threshold above the participant count', () => {
-    expect(() => parseGateConfig(config(rule('x', { participants: ['a', 'a'] })), 'gate')).toThrow(/repeats/);
+    expect(() => parseGateConfig(config(rule('x', { participants: ['a', 'a'] })), 'gate')).toThrow(/participants/);
     expect(() => parseGateConfig(config(rule('x', { participants: ['a', 'gate'] })), 'gate')).toThrow(
       /gate's own agent id 'gate'/,
     );

@@ -196,7 +196,9 @@ For a gated call the gate:
    `POLICY_DENIED: …` when the session commits `deny` (or a bound policy
    refuses the commitment), `SESSION_NOT_OPEN: …` when the session expires or
    is cancelled without a commitment. If the session is still open 5 s after
-   its TTL, the gate cancels it.
+   its TTL, the gate cancels it. A call whose arguments hold an integer
+   outside ±(2^53−1) is refused with `INVALID_ARGUMENT: …` before any session
+   opens: JSON may already have rounded it, so it has no canonical form.
 
 Approvers are ordinary MACP agents, for example a base `macp-mcp` server
 driven by a person or another model, voting through the runtime. See

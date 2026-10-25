@@ -7,7 +7,7 @@
  * participants). In Decision it must be a participant to send its Proposal,
  * so it is added as the first participant, but it never votes and is not
  * counted. Either way the gate watches the session's stream and commits as
- * soon as the outcome is settled: positive once the approvers' latest ballots
+ * soon as the outcome is settled: positive once the approvers' first ballots
  * reach the rule's threshold, negative once they no longer can.
  *
  * What approvers see on the wire (intent, request fields, commitment action
@@ -31,6 +31,7 @@ import {
 import { decodeCommitment, stateName, type BridgeClient } from '../bridge';
 import type { Settings } from '../config';
 import { GATE_DEFAULT_TTL_MS, requiredApprovals, type GateMode, type GateRule } from './config';
+import { renderRefusal, type GateTemplate } from './contract';
 
 /** Decision-mode proposal id: one gated call per session. */
 export const GATE_PROPOSAL_ID = 'call';
@@ -55,13 +56,20 @@ export interface GateCommitment {
 /** A gated call that cannot go ahead. `code` is a registry error code; the tool error text is `"<code>: <message>"`. */
 export class GateRefusal extends Error {
   constructor(
-    readonly code: 'POLICY_DENIED' | 'SESSION_NOT_OPEN',
+    readonly code: 'POLICY_DENIED' | 'SESSION_NOT_OPEN' | 'INVALID_ARGUMENT',
     message: string,
     readonly sessionId: string,
   ) {
     super(message);
     this.name = 'GateRefusal';
   }
+}
+
+/** A refusal whose `"<code>: <message>"` text is exactly the rendered `session.json` template. */
+export function refusal(template: GateTemplate, vars: Record<string, string>, sessionId = ''): GateRefusal {
+  const text = renderRefusal(template, vars);
+  const at = text.indexOf(': ');
+  return new GateRefusal(text.slice(0, at) as GateRefusal['code'], text.slice(at + 2), sessionId);
 }
 
 export interface GatedCall {
@@ -95,7 +103,8 @@ function tracker<B extends { sender: string }>(
   return {
     apply: (envelope) => projection.applyEnvelope(envelope, client.protoRegistry),
     outcome: () => {
-      // The projections key ballots by sender, so each approver's latest ballot is the one counted.
+      // The first ballot per approver counts (session.json): the runtime rejects a second one, and
+      // the SDK projections, keyed by sender, keep the first ballot either way.
       const counted = [...ballots()].filter((b) => approvers.has(b.sender));
       const approvals = counted.filter(isApprove).length;
       return settle(approvals, counted.length, approvers.size, requiredApprovals(rule));
@@ -182,11 +191,7 @@ export class GateApprover {
   ): Promise<GateCommitment> {
     const sessionId = session.sessionId;
     const notOpen = (state: string): GateRefusal =>
-      new GateRefusal(
-        'SESSION_NOT_OPEN',
-        `session ${sessionId} ended ${state} without a commitment; tool call ${call.tool} was not forwarded`,
-        sessionId,
-      );
+      refusal('not_open', { session_id: sessionId, state, tool: call.tool }, sessionId);
     const stream: MacpStream = this.client.openStream();
     let committing = false;
     try {
@@ -231,7 +236,7 @@ export class GateApprover {
           if (err.failure.code === 'POLICY_DENIED') {
             // A bound RFC-MACP-0012 policy refused the commitment.
             await this.cancel(session, 'commitment refused by the session policy');
-            throw new GateRefusal('POLICY_DENIED', err.failure.message, sessionId);
+            throw refusal('policy_denied', { runtime_message: err.failure.message }, sessionId);
           }
           throw err;
         }
@@ -245,9 +250,5 @@ export class GateApprover {
 
 /** The refusal for a settled `deny`. */
 export function denied(commitment: GateCommitment, tool: string): GateRefusal {
-  return new GateRefusal(
-    'POLICY_DENIED',
-    `tool call ${tool} denied by session ${commitment.session_id} (commitment ${commitment.commitment_hash})`,
-    commitment.session_id,
-  );
+  return refusal('denied', { tool, session_id: commitment.session_id }, commitment.session_id);
 }

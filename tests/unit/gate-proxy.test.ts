@@ -76,9 +76,18 @@ describe('gate proxy', () => {
     const { client, upstreamRequest } = await connect(async () => ({ ...COMMITMENT, outcome: 'deny' }));
     const result = await client.callTool({ name: 'write_file', arguments: {} });
     expect(result.isError).toBe(true);
+    expect(text(result)).toBe('POLICY_DENIED: tool call write_file denied by session sess-1');
+    expect(upstreamRequest).not.toHaveBeenCalled();
+  });
+
+  it('refuses an unsafe integer before any session opens', async () => {
+    const { client, upstreamRequest, approver } = await connect(async () => COMMITMENT);
+    const result = await client.callTool({ name: 'write_file', arguments: { n: [1, 1e21] } });
+    expect(result.isError).toBe(true);
     expect(text(result)).toBe(
-      `POLICY_DENIED: tool call write_file denied by session sess-1 (commitment ${COMMITMENT.commitment_hash})`,
+      'INVALID_ARGUMENT: tool call write_file arguments contain an integer outside ±(2^53−1), which has no canonical JSON form',
     );
+    expect(approver.decide).not.toHaveBeenCalled();
     expect(upstreamRequest).not.toHaveBeenCalled();
   });
 

@@ -179,7 +179,7 @@ describe('macp-mcp gate over stdio against a live runtime', () => {
 
     const result = await pending;
     expect(result.isError).toBe(true);
-    expect(text(result)).toMatch(/^POLICY_DENIED: /);
+    expect(text(result)).toMatch(/^POLICY_DENIED: tool call \S+ denied by session \S+$/);
     expect(text(result)).toContain(meta.sessionId);
     expect(upstreamCalls()).toEqual([]);
     expect((await bob.getSession(meta.sessionId!)).metadata.state).toBe('SESSION_STATE_RESOLVED');
@@ -210,7 +210,7 @@ describe('macp-mcp gate over stdio against a live runtime', () => {
     const started = Date.now();
     const expired = await gate.callTool({ name: 'slow1', arguments: { n: RUN } });
     expect(expired.isError).toBe(true);
-    expect(text(expired)).toMatch(/^SESSION_NOT_OPEN: session \S+ ended (EXPIRED|CANCELLED) without a commitment/);
+    expect(text(expired)).toMatch(/^SESSION_NOT_OPEN: session \S+ ended (EXPIRED|CANCELLED) without a commitment$/);
     expect(Date.now() - started).toBeGreaterThanOrEqual(1_500);
     expect(upstreamCalls().map((c) => c.name)).toEqual(['slowly']);
   });

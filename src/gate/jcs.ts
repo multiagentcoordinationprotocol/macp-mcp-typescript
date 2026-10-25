@@ -32,3 +32,15 @@ export function canonicalize(value: unknown): string {
   }
   throw new CanonicalizationError(`cannot canonicalize a value of type ${typeof value}`);
 }
+
+/**
+ * Whether `value` holds, at any depth, an integral number outside ±(2^53−1).
+ * Such a number has no canonical form: JSON.parse may already have rounded it,
+ * so an approver would sign off on a value other than the one forwarded.
+ */
+export function hasUnsafeInteger(value: unknown): boolean {
+  if (typeof value === 'number') return Number.isInteger(value) && !Number.isSafeInteger(value);
+  if (Array.isArray(value)) return value.some(hasUnsafeInteger);
+  if (value !== null && typeof value === 'object') return Object.values(value).some(hasUnsafeInteger);
+  return false;
+}

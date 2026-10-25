@@ -104,7 +104,7 @@ commits `macp.gate.deny` and refuses the call:
   "content": [
     {
       "type": "text",
-      "text": "POLICY_DENIED: tool call echo denied by session 14ca9eab-5126-4789-9a43-8b98aec29943 (commitment sha256:ca87e5d23ce9f99f0bddba3be8b17e6650832ab4badf31695617a364032e346d)"
+      "text": "POLICY_DENIED: tool call echo denied by session 14ca9eab-5126-4789-9a43-8b98aec29943"
     }
   ],
   "isError": true
@@ -121,7 +121,7 @@ expires the session, and the gate refuses the call without a commitment:
   "content": [
     {
       "type": "text",
-      "text": "SESSION_NOT_OPEN: session fe667ef0-b9dd-4d03-90a5-504828a590b0 ended EXPIRED without a commitment; tool call slowpoke was not forwarded"
+      "text": "SESSION_NOT_OPEN: session fe667ef0-b9dd-4d03-90a5-504828a590b0 ended EXPIRED without a commitment"
     }
   ],
   "isError": true

@@ -23,12 +23,14 @@ import {
 import { errorText } from '../server';
 import { VERSION } from '../version';
 import type { GateApprover } from './approval';
-import { GateRefusal, denied, type GateCommitment } from './approval';
+import { GateRefusal, denied, refusal, type GateCommitment } from './approval';
 import { matchRule, type GateConfig } from './config';
 import { contextIdOf, gatePreimage } from './context-id';
+import { GATE_SERVER } from './contract';
+import { hasUnsafeInteger } from './jcs';
 
 export const GATE_META_KEY = 'io.multiagentcoordinationprotocol/commitment';
-export const GATE_SERVER_NAME = 'macp-mcp-gate';
+export const GATE_SERVER_NAME = GATE_SERVER.name;
 
 /** The part of an MCP `Client` connected to the upstream that the gate uses. */
 export type Upstream = Pick<Client, 'request'>;
@@ -48,7 +50,7 @@ export function buildGateServer(options: { config: GateConfig; upstream: Upstrea
   const { config, upstream, approver } = options;
   const server = new Server(
     { name: GATE_SERVER_NAME, title: 'MACP tool-call gate', version: VERSION },
-    { capabilities: { tools: {} } },
+    { capabilities: { tools: {} }, instructions: GATE_SERVER.instructions },
   );
 
   server.setRequestHandler(ListToolsRequestSchema, (request) =>
@@ -68,6 +70,8 @@ export function buildGateServer(options: { config: GateConfig; upstream: Upstrea
     const args = (request.params.arguments ?? {}) as Record<string, unknown>;
     let commitment: GateCommitment;
     try {
+      // A number JSON.parse may already have rounded has no canonical form; refuse before any session opens.
+      if (hasUnsafeInteger(args)) throw refusal('unsafe_integer', { tool: name });
       const preimage = gatePreimage(config.server, name, args);
       commitment = await approver.decide(rule, {
         server: config.server,
