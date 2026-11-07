@@ -246,12 +246,35 @@ describe('GateApprover, Quorum', () => {
     expect(rt.cancel).toHaveBeenCalledOnce();
   });
 
-  it('lets any other MACP error through for the base error formatting', async () => {
+  it('lets any other MACP error through for the base error formatting, cancelling the session', async () => {
     const nack = new MacpAckError({ ok: false, error: { code: 'INVALID_PAYLOAD', message: 'bad' } } as Ack);
     const rt = fakeRuntime({ ack: (sent) => (sent.messageType === 'ApprovalRequest' ? nack : ({ ok: true } as Ack)) });
     await expect(
       new GateApprover(rt.client, defaultSettings({ agentId: 'gate' })).decide(quorumRule, CALL),
     ).rejects.toBe(nack);
+    expect(rt.cancel).toHaveBeenCalledOnce();
+  });
+
+  it('cancels the session when the runtime refuses the commit with a non-policy code', async () => {
+    // Runtime 0.14.0 folds a bound policy's Quorum threshold into commitment readiness: INVALID_ENVELOPE.
+    const nack = new MacpAckError({
+      ok: false,
+      error: { code: 'INVALID_ENVELOPE', message: 'InvalidPayload' },
+    } as Ack);
+    const rt = fakeRuntime({
+      script: (sent, emit) => {
+        if (sent.messageType === 'ApprovalRequest') {
+          emit('Approve', 'alice', { requestId: CALL.contextId });
+          emit('Approve', 'bob', { requestId: CALL.contextId });
+        }
+      },
+      ack: (sent) =>
+        sent.messageType === 'Commitment' ? nack : ({ ok: true, sessionState: 'SESSION_STATE_OPEN' } as Ack),
+    });
+    await expect(
+      new GateApprover(rt.client, defaultSettings({ agentId: 'gate' })).decide(quorumRule, CALL),
+    ).rejects.toBe(nack);
+    expect(rt.cancel).toHaveBeenCalledOnce();
   });
 });
 
