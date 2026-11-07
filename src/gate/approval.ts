@@ -132,13 +132,16 @@ export class GateApprover {
     if (rule.mode === MODE_QUORUM) {
       const quorum = new QuorumSession(client, options);
       await quorum.start({ intent, participants: rule.participants, ttlMs, contextId: call.contextId });
-      await quorum.requestApproval({
-        requestId: call.contextId,
-        action: `tools/call:${call.tool}`,
-        summary: `${call.server}/${call.tool}`,
-        details: Buffer.from(call.preimage, 'utf8'),
-        requiredApprovals: requiredApprovals(rule),
-      });
+      session = quorum;
+      await this.cancelOnError(session, () =>
+        quorum.requestApproval({
+          requestId: call.contextId,
+          action: `tools/call:${call.tool}`,
+          summary: `${call.server}/${call.tool}`,
+          details: Buffer.from(call.preimage, 'utf8'),
+          requiredApprovals: requiredApprovals(rule),
+        }),
+      );
       const projection = new QuorumProjection();
       track = tracker(
         projection,
@@ -147,16 +150,18 @@ export class GateApprover {
         () => projection.ballots.get(call.contextId)?.values() ?? [],
         (b) => b.vote === 'approve',
       );
-      session = quorum;
     } else {
       const decision = new DecisionSession(client, options);
       const participants = [this.settings.agentId, ...rule.participants];
       await decision.start({ intent, participants, ttlMs, contextId: call.contextId });
-      await decision.propose({
-        proposalId: GATE_PROPOSAL_ID,
-        option: `tools/call:${call.tool}`,
-        rationale: call.preimage,
-      });
+      session = decision;
+      await this.cancelOnError(session, () =>
+        decision.propose({
+          proposalId: GATE_PROPOSAL_ID,
+          option: `tools/call:${call.tool}`,
+          rationale: call.preimage,
+        }),
+      );
       const projection = new DecisionProjection();
       track = tracker(
         projection,
@@ -165,9 +170,22 @@ export class GateApprover {
         () => projection.votes.get(GATE_PROPOSAL_ID)?.values() ?? [],
         (v) => v.vote.toUpperCase() === 'APPROVE',
       );
-      session = decision;
     }
-    return this.watch(session, rule.mode, track, call, deadline);
+    return this.cancelOnError(session, () => this.watch(session, rule.mode, track, call, deadline));
+  }
+
+  /**
+   * Run `step` on an open session; on any failure other than a GateRefusal
+   * (whose path already cancelled the session or found it ended), cancel the
+   * session so it does not linger OPEN until its TTL, then rethrow.
+   */
+  private async cancelOnError<T>(session: QuorumSession | DecisionSession, step: () => Promise<T>): Promise<T> {
+    try {
+      return await step();
+    } catch (err) {
+      if (!(err instanceof GateRefusal)) await this.cancel(session, 'gate error');
+      throw err;
+    }
   }
 
   private async state(sessionId: string): Promise<string> {
