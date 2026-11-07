@@ -32,7 +32,7 @@ server's. It needs a MACP runtime to talk to. For local development:
 
 ```bash
 docker run -p 50051:50051 -e MACP_ALLOW_INSECURE=1 -e MACP_MEMORY_ONLY=1 \
-  ghcr.io/multiagentcoordinationprotocol/macp-runtime:0.9.0
+  ghcr.io/multiagentcoordinationprotocol/macp-runtime:0.14.0
 ```
 
 One `macp-mcp` process is one MACP agent. For several agents to take part in a
@@ -247,7 +247,7 @@ make verify-contract       # contract/tools.json == the Python macp-mcp's
 # Acceptance: two stdio MCP clients drive a Decision session to RESOLVED
 docker run -d --rm --name macp-runtime-test -p 50051:50051 \
   -e MACP_BIND_ADDR=0.0.0.0:50051 -e MACP_ALLOW_INSECURE=1 -e MACP_MEMORY_ONLY=1 \
-  ghcr.io/multiagentcoordinationprotocol/macp-runtime:0.9.0
+  ghcr.io/multiagentcoordinationprotocol/macp-runtime:0.14.0
 npx tsx scripts/wait-for-runtime.ts
 npm run test:integration
 ```
