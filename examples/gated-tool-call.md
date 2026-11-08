@@ -2,7 +2,7 @@
 
 A real run of `macp-mcp gate` in front of the stub upstream used by the
 integration tests (`tests/fixtures/stub-upstream.ts`, tools `echo` and `add`),
-against a local `ghcr.io/multiagentcoordinationprotocol/macp-runtime:0.14.0`
+against a local `ghcr.io/multiagentcoordinationprotocol/macp-runtime:0.14.1`
 started with `MACP_ALLOW_INSECURE=1`. Two approvers, `alice` and `bob`, are
 plain MACP agents that vote through the runtime. Session ids and hashes are
 from that run, so yours will differ.
