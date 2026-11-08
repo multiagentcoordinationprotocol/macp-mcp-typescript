@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       runtime:
-        image: ghcr.io/multiagentcoordinationprotocol/macp-runtime:0.14.0
+        image: ghcr.io/multiagentcoordinationprotocol/macp-runtime:0.14.1
         ports:
           - 50123:50123
         env:
